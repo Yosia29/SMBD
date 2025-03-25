@@ -109,11 +109,14 @@ UPDATE employee SET umur = TIMESTAMPDIFF(YEAR, birth_date, CURDATE());
 
 
 **6.Bukti Dukung**
-- Pengujian dengan menjalankan query yang where clause
+- Uji Performa Query Sebelum Composite
 
-  ![image](https://github.com/user-attachments/assets/8d089cf6-57bf-4390-94fc-9016ead9b6c4)
+![image](https://github.com/user-attachments/assets/225628f8-c74c-4333-a8da-62350741df70)
 
-  ![image](https://github.com/user-attachments/assets/15134b99-dfe9-4bf9-bb85-67ff95a456f4)
+
+- Uji Performa Query Sesudah Composite
+
+ ![image](https://github.com/user-attachments/assets/553a9d68-b399-4b60-876f-d1d3fa53d210)
 
 
   
