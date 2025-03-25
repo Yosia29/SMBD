@@ -1,6 +1,6 @@
 **1.Latar Belakang**
 
-Dalam pengelolaan database yang memiliki jumlah data besar, optimasi query menjadi aspek penting untuk meningkatkan performa. Salah satu teknik yang sering digunakan adalah indexing, yang memungkinkan query dapat dieksekusi lebih cepat. Pada tugas ini, dilakukan beberapa teknik optimasi pada database employee, seperti:
+Dalam database dengan jumlah data yang besar, partisi (partitioning) adalah teknik yang berguna untuk meningkatkan performa query dengan membagi tabel menjadi beberapa bagian yang lebih kecil. Pada tugas ini, kita akan menerapkan partisi berdasarkan tahun transaksi pada tabel tr_penjualan, kemudian menguji perbedaan performa antara tabel yang menggunakan partisi dan yang tidak.
 
 - Menambahkan index pada kolom pencarian.
 
@@ -10,79 +10,111 @@ Dalam pengelolaan database yang memiliki jumlah data besar, optimasi query menja
 
 **2. Problem yang Diangkat**
 
-Bagaimana cara meningkatkan performa query dalam database employee dengan menerapkan indexing pada kolom yang sering digunakan dalam pencarian?
+Bagaimana cara meningkatkan efisiensi eksekusi query pada database tr_penjualan dengan:
+
+- Membuat tabel dengan partisi berdasarkan tahun transaksi.
+
+- Mengisi tabel partisi dengan data dari tabel utama.
+
+- Mengukur perbedaan performa antara tabel partisi dan tabel biasa.
+
+- Melakukan pengujian query dengan berbagai kondisi pencarian.
 
 **3.Solusi / Skenario Aktivitas**
 
-Solusi yang diimplementasikan meliputi:
+Langkah-langkah yang dilakukan dalam tugas ini:
 
-- Mengimport database employee.sql dan melakukan query dasar.
+- Membuat tabel tr_penjualan_partisi dengan partisi berdasarkan tahun transaksi.
 
-- Menambahkan indeks pada kolom yang sering digunakan dalam pencarian.
+- Mengisi tabel partisi dengan data yang sesuai.
 
-- Melakukan uji performa query sebelum dan sesudah indexing menggunakan EXPLAIN.
+- Membandingkan performa query antara tabel partisi dan tabel biasa (tr_penjualan_raw).
 
-- Mengevaluasi dampak indexing terhadap kecepatan query.
-
-
+- Melakukan uji coba dengan berbagai kondisi pencarian.
 
 **4.Pembahasan**
 
-**A. Proses Import Database Employee**
+**A. Pembuatan Tabel dengan Partisi**
 
-- Import database employee.sql menggunakan perintah:
+- Tabel tr_penjualan_partisi dibuat dengan partisi berdasarkan tahun transaksi menggunakan PARTITION BY RANGE::
 
-  SOURCE /path/to/employee.sql;
-
--Verifikasi hasil import dengan:
-
-SELECT * FROM employee
-
-**B. Penggunaan Indexing untuk Optimasi Query**
-
-1. Menjalankan Query Tanpa Index
-
-   EXPLAIN SELECT * FROM employee WHERE first_name = 'Georgi';
-
-2. Menambahkan Index pada first_name dan last_name
-
-   ALTER TABLE employee ADD INDEX idx_full_name (first_name, last_name);
-
-3. Menjalankan Query Setelah Index Ditambahkan
-
-   EXPLAIN SELECT * FROM employee WHERE first_name = 'Georgi' AND last_name = 'Bahr';
-
-**C. Pengujian Performa Query**
-
-1. Sebelum Index Ditambahkan
-
-   SELECT * FROM employee WHERE first_name = 'Georgi' AND last_name = 'Bahr';
-
-2. Sesudah Index Ditambahkan
-
-   ALTER TABLE employee ADD INDEX idx_full_name (first_name, last_name);
-SELECT * FROM employee WHERE first_name = 'Georgi' AND last_name = 'Bahr';
-
-**D. Menambahkan Kolom dan Optimasi Lainnya**
-
-1. Menambahkan Kolom nama_departemen pada dept_manager dan dept_emp
-
- ALTER TABLE dept_manager ADD COLUMN nama_departemen VARCHAR(255);
-ALTER TABLE dept_emp ADD COLUMN nama_departemen VARCHAR(255);
-
-2. Menampilkan Gaji Tertinggi di Departemen d006
-
-   SELECT e.first_name, e.last_name, s.amount  
-FROM employee e  
-JOIN salary s ON e.emp_no = s.emp_no  
-JOIN dept_emp d ON e.emp_no = d.emp_no  
-WHERE d.dept_no = 'd006'  
-AND s.amount = (  
-    SELECT MAX(s2.amount)  
-    FROM salary s2  
-    JOIN dept_emp d2 ON s2.emp_no = d2.emp_no  
-    WHERE d2.dept_no = 'd006'
+  CREATE TABLE tr_penjualan_partisi ( 
+    tgl_transaksi DATETIME DEFAULT NULL, 
+    kode_cabang VARCHAR(10) DEFAULT NULL, 
+    kode_kasir VARCHAR(10) DEFAULT NULL, 
+    kode_item VARCHAR(7) DEFAULT NULL, 
+    kode_produk VARCHAR(12) DEFAULT NULL, 
+    jumlah_pembelian INT(11) DEFAULT NULL, 
+    nama_kasir VARCHAR(40) DEFAULT NULL, 
+    harga INT(6) DEFAULT NULL 
+) 
+PARTITION BY RANGE (YEAR(tgl_transaksi)) ( 
+    PARTITION p0 VALUES LESS THAN (2008), 
+    PARTITION p1 VALUES LESS THAN (2009), 
+    PARTITION p2 VALUES LESS THAN (2010), 
+    PARTITION p3 VALUES LESS THAN (2011), 
+    PARTITION p4 VALUES LESS THAN (2012), 
+    PARTITION p5 VALUES LESS THAN (2013), 
+    PARTITION p6 VALUES LESS THAN (2014), 
+    PARTITION p7 VALUES LESS THAN (2015) 
 );
+
+**B. B. Mengisi Data ke dalam Partisi**
+
+1. Memasukkan Data dari tr_penjualan ke dalam tr_penjualan_partisi
+
+   INSERT INTO tr_penjualan_partisi (tgl_transaksi, kode_cabang, kode_kasir, kode_item, 
+kode_produk, jumlah_pembelian, nama_kasir, harga) 
+SELECT tgl_transaksi, kode_cabang, kode_kasir, kode_item, kode_produk, jumlah_pembelian, 
+nama_kasir, harga 
+FROM tr_penjualan 
+WHERE YEAR(tgl_transaksi) = 2011;
+
+**C. Membandingkan Performansi Query Antara Tabel Partisi dan Tabel Biasa**
+
+1. Membuat Tabel tr_penjualan_raw (Tanpa Partisi)
+
+  CREATE TABLE tr_penjualan_raw ( 
+    tgl_transaksi DATETIME DEFAULT NULL, 
+    kode_cabang VARCHAR(10) DEFAULT NULL, 
+    kode_kasir VARCHAR(10) DEFAULT NULL, 
+    kode_item VARCHAR(7) DEFAULT NULL, 
+    kode_produk VARCHAR(12) DEFAULT NULL, 
+    jumlah_pembelian INT(11) DEFAULT NULL, 
+    nama_kasir VARCHAR(40) DEFAULT NULL, 
+    harga INT(6) DEFAULT NULL 
+);
+
+
+2. Kemudian, isi tabel dengan data yang sama dari tr_penjualan_partisi:
+
+   INSERT INTO tr_penjualan_raw 
+SELECT * FROM tr_penjualan_partisi;
+
+
+**D. Pengujian Performansi Query**
+
+1. Pengujian Query Berdasarkan tgl_transaksi
+   - Query berikut diuji 10 kali dan dicatat rata-rata waktunya:
+
+-- Query pada tabel tanpa partisi
+SELECT * FROM tr_penjualan_raw 
+WHERE tgl_transaksi > DATE('2010-08-01') 
+AND tgl_transaksi < DATE('2011-07-31');
+
+-- Query pada tabel dengan partisi
+SELECT * FROM tr_penjualan_partisi 
+WHERE tgl_transaksi > DATE('2010-08-01') 
+AND tgl_transaksi < DATE('2011-07-31');
+
+
+2. Pengujian Query Berdasarkan jumlah_pembelian
+
+  -- Query pada tabel tanpa partisi
+SELECT * FROM tr_penjualan_raw WHERE jumlah_pembelian > 5;
+
+-- Query pada tabel dengan partisi
+SELECT * FROM tr_penjualan_partisi WHERE jumlah_pembelian > 5;
 
 3. Menambahkan Kolom umur pada Tabel employee dan Mengisinya Secara Otomatis
 
@@ -90,30 +122,30 @@ AND s.amount = (
 UPDATE employee SET umur = TIMESTAMPDIFF(YEAR, birth_date, CURDATE());
 
 
-4. Menambahkan Foreign Key Index
-
-   ALTER TABLE dept_manager ADD CONSTRAINT fk_dept FOREIGN KEY (dept_no) REFERENCES department(dept_no);
-
-
-
 **5. Kesimpulan**
 
-- Indexing dapat meningkatkan kecepatan query secara signifikan.
+- Partisi sangat efektif untuk query yang berbasis tgl_transaksi, karena hanya membaca partisi tertentu.
 
-- Penggunaan composite index (first_name, last_name) mampu mempercepat pencarian hingga 4x lebih cepat.
+- Query tanpa partisi membutuhkan full table scan, sehingga lebih lambat.
 
-- Menambahkan kolom tambahan (nama_departemen, umur) membantu analisis data lebih lanjut.
+- Partisi tidak memberikan keuntungan signifikan jika query tidak menggunakan kolom yang dijadikan dasar partisi.
 
-- Foreign key index digunakan untuk menjaga referensial integritas antar tabel.
-
+- Indeks masih diperlukan untuk optimasi query yang tidak memanfaatkan partisi.
 
 
 **6.Bukti Dukung**
-- Pengujian dengan menjalankan query yang where clause
+- Pembuatan tabel partisi
 
-  ![image](https://github.com/user-attachments/assets/8d089cf6-57bf-4390-94fc-9016ead9b6c4)
+ ![image](https://github.com/user-attachments/assets/8356fe6b-d63b-4194-9be4-1196cffe8698)
 
-  ![image](https://github.com/user-attachments/assets/15134b99-dfe9-4bf9-bb85-67ff95a456f4)
+- hasil query sebelum partisi
+  
+  ![image](https://github.com/user-attachments/assets/9a9ac20b-a7a8-44f1-8f01-920cdbd23d3b)
+
+
+- hasil query sesudah partisi
+
+![image](https://github.com/user-attachments/assets/571621c5-b44a-403c-9e82-4dafc7dc8212)
 
 
   
