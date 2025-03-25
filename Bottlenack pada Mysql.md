@@ -26,25 +26,37 @@ Bagaimana cara meningkatkan efisiensi eksekusi query pada database minimarket de
 
 - Menguji perbedaan performa sebelum dan sesudah optimasi.
 
+**3.Solusi / Skenario Aktivitas**
 
+**Teknik Optimasi yang Diterapkan**
+
+- Menggunakan Indexing → Mempercepat pencarian data dengan indeks.
+
+- Query Optimization → Menulis query yang lebih efisien.
+
+- Query Cache → Menyimpan hasil query agar lebih cepat saat dieksekusi ulang.
+
+- Buffer Pool Tuning → Mengatur innodb_buffer_pool_size agar lebih optimal.
+
+- Analisis EXPLAIN → Memeriksa bagaimana MySQL menjalankan query untuk menemukan bottleneck.
 
 **4.Pembahasan**
 
-**A. Proses Import Database Employee**
+**A. Menambahkan Index pada tr_penjualan_raw**
 
 - Import database employee.sql menggunakan perintah:
 
-  SOURCE /path/to/employee.sql;
+  CREATE INDEX idx_tgl_transaksi ON tr_penjualan_raw(tgl_transaksi); 
+CREATE INDEX idx_kode_item ON tr_penjualan_raw(kode_item); 
+CREATE INDEX idx_nama_kasir ON tr_penjualan_raw(nama_kasir); 
+CREATE INDEX idx_harga ON tr_penjualan_raw(harga); 
 
--Verifikasi hasil import dengan:
-
-SELECT * FROM employee
-
-**B. Penggunaan Indexing untuk Optimasi Query**
+**B. Menggunakan Query Cache**
 
 1. Menjalankan Query Tanpa Index
 
-   EXPLAIN SELECT * FROM employee WHERE first_name = 'Georgi';
+  SHOW VARIABLES LIKE 'query_cache_size';
+
 
 2. Menambahkan Index pada first_name dan last_name
 
@@ -54,75 +66,68 @@ SELECT * FROM employee
 
    EXPLAIN SELECT * FROM employee WHERE first_name = 'Georgi' AND last_name = 'Bahr';
 
-**C. Pengujian Performa Query**
+**C. Optimasi Query**
 
-1. Sebelum Index Ditambahkan
+1. Query Filter Berdasarkan Tahun Transaksi
 
-   SELECT * FROM employee WHERE first_name = 'Georgi' AND last_name = 'Bahr';
-
-2. Sesudah Index Ditambahkan
-
-   ALTER TABLE employee ADD INDEX idx_full_name (first_name, last_name);
-SELECT * FROM employee WHERE first_name = 'Georgi' AND last_name = 'Bahr';
-
-**D. Menambahkan Kolom dan Optimasi Lainnya**
-
-1. Menambahkan Kolom nama_departemen pada dept_manager dan dept_emp
-
- ALTER TABLE dept_manager ADD COLUMN nama_departemen VARCHAR(255);
-ALTER TABLE dept_emp ADD COLUMN nama_departemen VARCHAR(255);
-
-2. Menampilkan Gaji Tertinggi di Departemen d006
-
-   SELECT e.first_name, e.last_name, s.amount  
-FROM employee e  
-JOIN salary s ON e.emp_no = s.emp_no  
-JOIN dept_emp d ON e.emp_no = d.emp_no  
-WHERE d.dept_no = 'd006'  
-AND s.amount = (  
-    SELECT MAX(s2.amount)  
-    FROM salary s2  
-    JOIN dept_emp d2 ON s2.emp_no = d2.emp_no  
-    WHERE d2.dept_no = 'd006'
-);
-
-3. Menambahkan Kolom umur pada Tabel employee dan Mengisinya Secara Otomatis
-
-   ALTER TABLE employee ADD COLUMN umur INT;
-UPDATE employee SET umur = TIMESTAMPDIFF(YEAR, birth_date, CURDATE());
+   SELECT * FROM tr_penjualan_raw WHERE YEAR(tgl_transaksi) = 2024;
 
 
-4. Menambahkan Foreign Key Index
+2. Query dengan IN untuk Banyak Item
 
-   ALTER TABLE dept_manager ADD CONSTRAINT fk_dept FOREIGN KEY (dept_no) REFERENCES department(dept_no);
+ SELECT * FROM tr_penjualan_raw WHERE kode_item IN ('ITEM1', 'ITEM2', 'ITEM3', ..., 'ITEM500');
 
+3. Query LIKE dengan Wildcard (%)
+
+SELECT * FROM tr_penjualan_raw WHERE nama_kasir LIKE '%John%';
+
+
+**D.Optimasi Query MAX(harga)**
+
+1. Query sebelum optimasi:
+
+ SELECT MAX(harga) FROM tr_penjualan_raw WHERE kode_cabang = 'CB001';
+
+
+2. Tambahkan Index pada kode_cabang
+CREATE INDEX idx_kode_cabang ON tr_penjualan_raw (kode_cabang);
+
+
+3. Tambahkan Index pada harga
+
+   CREATE INDEX idx_harga ON tr_penjualan_raw (harga);
+
+
+
+4.Gunakan Index dalam Query
+
+SELECT MAX(harga) FROM tr_penjualan_raw WHERE kode_cabang = 'CB001';
 
 
 **5. Kesimpulan**
 
-- Indexing dapat meningkatkan kecepatan query secara signifikan.
+Dari hasil pengujian, diperoleh beberapa kesimpulan:
 
-- Penggunaan composite index (first_name, last_name) mampu mempercepat pencarian hingga 4x lebih cepat.
+- Indexing sangat efektif dalam meningkatkan performa query berbasis pencarian.
 
-- Menambahkan kolom tambahan (nama_departemen, umur) membantu analisis data lebih lanjut.
+- Query cache dapat mempercepat eksekusi ulang query yang sering digunakan.
 
-- Foreign key index digunakan untuk menjaga referensial integritas antar tabel.
+- Fungsi dalam WHERE seperti YEAR() harus dihindari karena menghambat penggunaan index.
 
+- Wildcard (% di awal LIKE statement) menyebabkan full table scan, sehingga FULLTEXT index lebih disarankan.
+
+- Index pada harga dan kode_cabang mempercepat query MAX(harga) secara signifikan.
 
 
 **6.Bukti Dukung**
-- Uji Performa Query Sebelum Composite
+- Hasil Waktu Eksekusi Query
 
-![image](https://github.com/user-attachments/assets/225628f8-c74c-4333-a8da-62350741df70)
+![image](https://github.com/user-attachments/assets/5cef316a-5b99-41ab-a83a-be548fb4d9d1)
 
-
-- Uji Performa Query Sesudah Composite
-
- ![image](https://github.com/user-attachments/assets/553a9d68-b399-4b60-876f-d1d3fa53d210)
 
 
   
 
 
 **7.Referensi**
-- https://dev.mysql.com/doc/refman/8.0/en/explain-output.html
+- https://dev.mysql.com/doc/refman/8.0/en/optimization.html
