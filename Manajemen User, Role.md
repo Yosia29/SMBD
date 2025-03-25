@@ -99,14 +99,20 @@ SET global log_output = 'table';
 
 
 **6.Bukti Dukung**
+
 📷 Screenshot Hasil Pembuatan User
+
 ![image](https://github.com/user-attachments/assets/9611a174-afab-4aa2-b1b1-96e4ca64d632)
 
 📷 Screenshot Hasil Pembuatan Role
+
 ![image](https://github.com/user-attachments/assets/bce054d4-b3b1-4ec9-8580-51d5c4a2057a)
 
 📷 Screenshot Log Aktivitas Pengguna
+
 ![image](https://github.com/user-attachments/assets/c7f02920-aeaa-48ac-9ecb-bc23b7ab0408)
+
+
 
 
 **7.Referensi**
