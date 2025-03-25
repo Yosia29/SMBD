@@ -3,6 +3,7 @@
 Dalam dunia pengelolaan data, database management system (DBMS) menjadi komponen penting dalam berbagai aplikasi. MySQL adalah salah satu database relational (RDBMS) yang banyak digunakan karena keandalannya dalam menangani data secara terstruktur. Oleh karena itu, dalam tugas ini akan dilakukan instalasi dan konfigurasi MySQL, termasuk mengubah pengaturan default dan mengamankan database.
 
 **2. Problem yang Diangkat**
+
 Bagaimana cara menginstal dan mengonfigurasi server database MySQL dengan benar, termasuk:
 
 - Perbedaan database relational dan unrelational serta kapan masing-masing digunakan.
