@@ -152,4 +152,4 @@ UPDATE employee SET umur = TIMESTAMPDIFF(YEAR, birth_date, CURDATE());
 
 
 **7.Referensi**
-- https://dev.mysql.com/doc/refman/8.0/en/explain-output.html
+- https://dev.mysql.com/doc/refman/8.0/en/partitioning.html
